@@ -11,6 +11,7 @@ provider:
   environment:
     PRODUCTS_TABLE: ${sls:stage}-t_productos
     CATEGORIES_TABLE: ${sls:stage}-t_categorias
+    PRODUCT_CATEGORY_TABLE: ${sls:stage}-product_category
     JWT_SECRET: "tu_clave_secreta_super_segura"  # Cambia esto por tu clave secreta real
 
 functions:
