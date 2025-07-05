@@ -38,10 +38,11 @@ def lambda_handler(event, context):
         # Si el token es válido, continuar con la eliminación de la categoría
         body = json.loads(event['body'])
         id_categoria = body['id_categoria']  # ID de la categoría a eliminar
+        empresa = body['empresa']  # Obtenemos la empresa desde el body
 
         # Eliminar la categoría de la tabla
         response = table.delete_item(
-            Key={'id_categoria': id_categoria},  # Usamos el id_categoria para la clave primaria
+            Key={'empresa': empresa, 'id_categoria': id_categoria},  # Usamos empresa como Partition Key y id_categoria como Sort Key
             ConditionExpression='attribute_exists(id_categoria)'  # Evitar eliminar un registro inexistente
         )
 

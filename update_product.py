@@ -38,6 +38,7 @@ def lambda_handler(event, context):
         # Si el token es válido, continuar con la actualización del producto
         body = json.loads(event['body'])
         id_producto = body['id_producto']  # ID del producto a actualizar
+        empresa = body['empresa']  # Obtener la empresa desde el body de la solicitud
 
         # Campos que se pueden actualizar
         update_fields = ['nombre', 'direccion', 'precio', 'stock', 'imagen_url', 'proveedor', 'category']
@@ -56,7 +57,7 @@ def lambda_handler(event, context):
 
         # Realizar la actualización en DynamoDB
         response = table.update_item(
-            Key={'id_producto': id_producto},
+            Key={'empresa': empresa, 'id_producto': id_producto},  # Usamos empresa como Partition Key y id_producto como Sort Key
             UpdateExpression="SET " + ", ".join(update_expression),
             ExpressionAttributeValues=expression_values,
             ReturnValues="ALL_NEW"

@@ -43,11 +43,15 @@ def lambda_handler(event, context):
         # Generar un ID único para la categoría (puedes usar el UUID como en el caso de usuario)
         id_categoria = str(uuid.uuid4())  # Generamos un UUID para la categoría
 
+        # Obtener la empresa desde el body
+        empresa = body['empresa']  # Ahora tomamos la empresa desde el body
+
         fecha_creacion = datetime.utcnow().isoformat()  # Fecha de creación en formato ISO 8601
 
         # Definir el item que se insertará en la tabla
         item = {
-            'id_categoria': id_categoria,   # Usamos el UUID generado como id_categoria
+            'empresa': empresa,  # Partition Key
+            'id_categoria': id_categoria,   # Sort Key
             'nombre': body['nombre'],
             'descripcion': body['descripcion'],
             'fecha_creacion': fecha_creacion
@@ -59,7 +63,13 @@ def lambda_handler(event, context):
         # Devolver la respuesta con la categoría creada
         return {
             'statusCode': 201,
-            'body': json.dumps({'id_categoria': id_categoria, 'nombre': body['nombre'], 'descripcion': body['descripcion'], 'fecha_creacion': fecha_creacion})
+            'body': json.dumps({
+                'empresa': empresa,
+                'id_categoria': id_categoria,
+                'nombre': body['nombre'],
+                'descripcion': body['descripcion'],
+                'fecha_creacion': fecha_creacion
+            })
         }
 
     except Exception as e:

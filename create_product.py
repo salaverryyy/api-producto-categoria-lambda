@@ -43,11 +43,15 @@ def lambda_handler(event, context):
         # Generar un ID único para el producto
         id_producto = str(uuid.uuid4())  # Generamos un UUID para el producto
 
+        # Obtener la empresa desde el body
+        empresa = body.get('empresa')  # Ahora tomamos la empresa desde el body
+
         fecha_creacion = datetime.utcnow().isoformat()  # Fecha de creación en formato ISO 8601
 
         # Definir el item que se insertará en la tabla
         item = {
-            'id_producto': id_producto,   # Usamos el UUID generado como id_producto
+            'empresa': empresa,  # Partition Key
+            'id_producto': id_producto,   # Sort Key
             'nombre': body['nombre'],
             'direccion': body['direccion'],
             'precio': body['precio'],
@@ -65,6 +69,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 201,
             'body': json.dumps({
+                'empresa': empresa,
                 'id_producto': id_producto,
                 'nombre': body['nombre'],
                 'direccion': body['direccion'],

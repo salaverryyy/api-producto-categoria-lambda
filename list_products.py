@@ -36,7 +36,17 @@ def lambda_handler(event, context):
             return {'statusCode': 403, 'body': json.dumps({'message': 'Acceso no autorizado'})}
 
         # Si el token es válido, continuar con la consulta de productos
-        response = table.scan()  # Usamos scan para obtener todos los productos de la tabla
+        body = json.loads(event['body'])
+        empresa = body.get('empresa')  # Obtener la empresa desde el body de la solicitud
+
+        if not empresa:
+            return {'statusCode': 400, 'body': json.dumps({'message': 'Empresa no proporcionada'})}
+
+        # Query para obtener los productos de la tabla Products filtrados por empresa
+        response = table.query(
+            KeyConditionExpression='empresa = :empresa_val',
+            ExpressionAttributeValues={':empresa_val': empresa}
+        )
 
         productos = response.get('Items', [])
 

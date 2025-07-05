@@ -56,9 +56,10 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': 'No se encontraron productos para esta categoría'})
             }
 
-        # Ahora, buscamos los productos en la tabla Products
-        products_response = product_table.scan(
-            FilterExpression='id_producto IN (' + ','.join([f':id{i}' for i in range(len(product_ids))]) + ')',
+        # Ahora, buscamos los productos en la tabla Products usando `query`
+        # Usamos `query` para obtener solo los productos que coinciden con `product_ids`
+        products_response = product_table.query(
+            KeyConditionExpression='id_producto IN (' + ','.join([f':id{i}' for i in range(len(product_ids))]) + ')',
             ExpressionAttributeValues={f':id{i}': product_ids[i] for i in range(len(product_ids))}
         )
 
