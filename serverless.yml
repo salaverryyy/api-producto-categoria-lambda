@@ -1,0 +1,169 @@
+org: jhonchilo
+service: api-productos-categorias
+
+provider:
+  name: aws
+  runtime: python3.13
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::570699102669:role/LabRole  # Cambia este ARN por el de tu rol IAM
+  environment:
+    PRODUCTS_TABLE: ${sls:stage}-t_productos
+    CATEGORIES_TABLE: ${sls:stage}-t_categorias
+    JWT_SECRET: "tu_clave_secreta_super_segura"  # Cambia esto por tu clave secreta real
+
+functions:
+  createProduct:
+    handler: create_product.lambda_handler
+    package:
+      include:
+        - create_product.py
+    events:
+      - http:
+          path: /productos/crear
+          method: post
+          cors: true
+
+  updateProduct:
+    handler: update_product.lambda_handler
+    package:
+      include:
+        - update_product.py
+    events:
+      - http:
+          path: /productos/modificar
+          method: put
+          cors: true
+
+  deleteProduct:
+    handler: delete_product.lambda_handler
+    package:
+      include:
+        - delete_product.py
+    events:
+      - http:
+          path: /productos/eliminar
+          method: delete
+          cors: true
+
+  getProductById:
+    handler: get_product_by_id.lambda_handler
+    package:
+      include:
+        - get_product_by_id.py
+    events:
+      - http:
+          path: /productos/obtener
+          method: get
+          cors: true
+
+  listProducts:
+    handler: list_products.lambda_handler
+    package:
+      include:
+        - list_products.py
+    events:
+      - http:
+          path: /productos/listar
+          method: get
+          cors: true
+
+  createCategory:
+    handler: create_category.lambda_handler
+    package:
+      include:
+        - create_category.py
+    events:
+      - http:
+          path: /categorias/crear
+          method: post
+          cors: true
+
+  updateCategory:
+    handler: update_category.lambda_handler
+    package:
+      include:
+        - update_category.py
+    events:
+      - http:
+          path: /categorias/modificar
+          method: put
+          cors: true
+
+  deleteCategory:
+    handler: delete_category.lambda_handler
+    package:
+      include:
+        - delete_category.py
+    events:
+      - http:
+          path: /categorias/eliminar
+          method: delete
+          cors: true
+
+  listCategories:
+    handler: list_categories.lambda_handler
+    package:
+      include:
+        - list_categories.py
+    events:
+      - http:
+          path: /categorias/listar
+          method: get
+          cors: true
+
+  verifyToken:
+    handler: verify_token.lambda_handler
+    package:
+      include:
+        - verify_token.py
+    events:
+      - http:
+          path: /usuarios/verify
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    ProductosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.PRODUCTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id_producto
+            AttributeType: S
+          - AttributeName: category
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id_producto
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    CategoriasTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CATEGORIES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id_categoria
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id_categoria
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    ProductCategoryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.PRODUCT_CATEGORY_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id_producto
+            AttributeType: S
+          - AttributeName: id_categoria
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id_producto
+            KeyType: HASH
+          - AttributeName: id_categoria
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
