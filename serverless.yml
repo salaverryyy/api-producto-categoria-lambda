@@ -79,7 +79,7 @@ functions:
        - http:
           path: /productos/categorias/listar
           method: get
-          cors:true  
+          cors: true  
 
   crearCategoria:
     handler: create_category.lambda_handler
