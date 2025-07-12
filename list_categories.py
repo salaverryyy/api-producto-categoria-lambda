@@ -1,64 +1,56 @@
-import json
-import boto3
-import os
+import json, boto3, os
+from boto3.dynamodb.conditions import Key   # ➊ para expresiones de consulta
 
-# Crear un cliente DynamoDB
-dynamodb = boto3.resource('dynamodb')
-table_name = os.getenv('CATEGORIES_TABLE')  # Usamos la variable de entorno para el nombre de la tabla
-table = dynamodb.Table(table_name)
-
-# Nombre del Lambda de verificación de token
-VERIFY_TOKEN_LAMBDA = os.getenv('VERIFY_TOKEN_LAMBDA')  # El nombre del Lambda verificar_token.py
+dynamodb = boto3.resource("dynamodb")
+table    = dynamodb.Table(os.getenv("CATEGORIES_TABLE"))
+VERIFY_TOKEN_LAMBDA = os.getenv("VERIFY_TOKEN_LAMBDA")
 
 def lambda_handler(event, context):
     try:
-        # Obtener el token del encabezado Authorization
-        auth_header = event['headers'].get('Authorization')
-        if not auth_header:
-            return {'statusCode': 401, 'body': json.dumps({'message': 'Token no proporcionado'})}
-
-        token = auth_header.split(" ")[1]
-
-        # Invocar el Lambda de verificación de token
-        lambda_client = boto3.client('lambda')
-        payload_string = json.dumps({'token': token})
-
-        invoke_response = lambda_client.invoke(
-            FunctionName=VERIFY_TOKEN_LAMBDA,
-            InvocationType='RequestResponse',
-            Payload=payload_string
-        )
-
-        # Procesar la respuesta del Lambda de verificación de token
-        response = json.loads(invoke_response['Payload'].read().decode("utf-8"))
-
-        if response['statusCode'] != 200:
-            return {'statusCode': 403, 'body': json.dumps({'message': 'Acceso no autorizado'})}
-
-        # Si el token es válido, continuar con la consulta de categorías
-        body = json.loads(event['body'])
-        empresa = body.get('empresa')  # Obtener la empresa desde el body de la solicitud
-
-        if not empresa:
-            return {'statusCode': 400, 'body': json.dumps({'message': 'Empresa no proporcionada'})}
-
-        # Realizamos un scan en la tabla filtrando por empresa
-        response = table.query(  # Usamos query en lugar de scan para obtener categorías por empresa
-            KeyConditionExpression='empresa = :empresa',
-            ExpressionAttributeValues={
-                ':empresa': empresa
+        # ---------- 1) Autenticación ----------
+        headers = event.get("headers") or {}
+        auth = headers.get("Authorization")
+        if not auth:
+            return {
+                "statusCode": 401,
+                "body": json.dumps({"message": "Token no proporcionado"})
             }
-        )
 
-        categorias = response.get('Items', [])
+        token = auth.split()[1]
+        resp  = boto3.client("lambda").invoke(
+            FunctionName   = VERIFY_TOKEN_LAMBDA,
+            InvocationType = "RequestResponse",
+            Payload        = json.dumps({"token": token})
+        )
+        # ➋ Decodificamos la respuesta del Lambda verificador
+        if json.loads(resp["Payload"].read().decode("utf-8"))["statusCode"] != 200:
+            return {
+                "statusCode": 403,
+                "body": json.dumps({"message": "Acceso no autorizado"})
+            }
+
+        # ---------- 2) Datos de entrada ----------
+        body       = json.loads(event.get("body") or "{}")
+        tenant_id  = body.get("empresa")         # Partition Key
+        if not tenant_id:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"message": "Empresa (tenant_id) no proporcionada"})
+            }
+
+        # ---------- 3) Consulta a DynamoDB ----------
+        response = table.query(
+            KeyConditionExpression = Key("tenant_id").eq(tenant_id)  # ➌ uso de Key
+        )
+        categorias = response.get("Items", [])
 
         return {
-            'statusCode': 200,
-            'body': json.dumps({'categorias': categorias})
+            "statusCode": 200,
+            "body": json.dumps({"categorias": categorias})
         }
 
     except Exception as e:
         return {
-            'statusCode': 400,
-            'body': json.dumps({'error': str(e)})
+            "statusCode": 400,
+            "body": json.dumps({"error": str(e)})
         }

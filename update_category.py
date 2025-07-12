@@ -1,71 +1,73 @@
-import json
-import boto3
-import os
+import json, boto3, os
+from boto3.dynamodb.conditions import Key
 
-# Crear un cliente DynamoDB
-dynamodb = boto3.resource('dynamodb')
-table_name = os.getenv('CATEGORIES_TABLE')  # Usamos la variable de entorno para el nombre de la tabla de categorías
-table = dynamodb.Table(table_name)
-
-# Nombre del Lambda de verificación de token
-VERIFY_TOKEN_LAMBDA = os.getenv('VERIFY_TOKEN_LAMBDA')  # El nombre del Lambda verificar_token.py
+dynamodb = boto3.resource("dynamodb")
+table    = dynamodb.Table(os.getenv("CATEGORIES_TABLE"))
+VERIFY_TOKEN_LAMBDA = os.getenv("VERIFY_TOKEN_LAMBDA")
 
 def lambda_handler(event, context):
     try:
-        # Obtener el token del encabezado Authorization
-        auth_header = event['headers'].get('Authorization')
-        if not auth_header:
-            return {'statusCode': 401, 'body': json.dumps({'message': 'Token no proporcionado'})}
+        # -------- 1) Autenticación --------
+        auth = (event.get("headers") or {}).get("Authorization")
+        if not auth:
+            return {"statusCode": 401,
+                    "body": json.dumps({"message": "Token no proporcionado"})}
 
-        token = auth_header.split(" ")[1]
+        token = auth.split()[1]
+        auth_resp = boto3.client("lambda").invoke(
+            FunctionName   = VERIFY_TOKEN_LAMBDA,
+            InvocationType = "RequestResponse",
+            Payload        = json.dumps({"token": token})
+        )
+        if json.loads(auth_resp["Payload"].read().decode("utf-8"))["statusCode"] != 200:
+            return {"statusCode": 403,
+                    "body": json.dumps({"message": "Acceso no autorizado"})}
 
-        # Invocar el Lambda de verificación de token
-        lambda_client = boto3.client('lambda')
-        payload_string = json.dumps({'token': token})
+        # -------- 2) Datos de entrada -----
+        body = json.loads(event.get("body") or "{}")
 
-        invoke_response = lambda_client.invoke(
-            FunctionName=VERIFY_TOKEN_LAMBDA,
-            InvocationType='RequestResponse',
-            Payload=payload_string
+        tenant_id    = body.get("empresa")          # PK
+        id_categoria = body.get("id_categoria")
+        id_producto  = body.get("id_producto")      # necesario para la SK
+
+        if not (tenant_id and id_categoria and id_producto):
+            return {"statusCode": 400,
+                    "body": json.dumps(
+                        {"message": "empresa, id_categoria e id_producto son requeridos"}
+                    )}
+
+        id_cat_prod = f"{id_categoria}#{id_producto}"   # SK
+
+        # Campos permitidos a actualizar
+        update_fields = ["nombre", "descripcion"]
+        expr_parts, expr_vals = [], {}
+
+        for f in update_fields:
+            if f in body:
+                expr_parts.append(f"{f} = :{f}")
+                expr_vals[f":{f}"] = body[f]
+
+        if not expr_parts:
+            return {"statusCode": 400,
+                    "body": json.dumps({"message": "No hay campos para actualizar"})}
+
+        # -------- 3) Actualización ----------
+        resp = table.update_item(
+            Key={
+                "tenant_id"            : tenant_id,
+                "id_categoria_producto": id_cat_prod
+            },
+            UpdateExpression      = "SET " + ", ".join(expr_parts),
+            ExpressionAttributeValues = expr_vals,
+            ReturnValues          = "ALL_NEW"
         )
 
-        # Procesar la respuesta del Lambda de verificación de token
-        response = json.loads(invoke_response['Payload'].read().decode("utf-8"))
-
-        if response['statusCode'] != 200:
-            return {'statusCode': 403, 'body': json.dumps({'message': 'Acceso no autorizado'})}
-
-        # Si el token es válido, continuar con la actualización de la categoría
-        body = json.loads(event['body'])
-        id_categoria = body['id_categoria']  # ID de la categoría a actualizar
-        empresa = body['empresa']  # Obtener la empresa desde el body de la solicitud
-
-        # Campos que se pueden actualizar
-        update_fields = ['nombre', 'descripcion']
-
-        # Construir expresión de actualización dinámica
-        update_expression = []
-        expression_values = {}
-
-        for field in update_fields:
-            if field in body:
-                update_expression.append(f"{field} = :{field}")
-                expression_values[f":{field}"] = body[field]
-
-        if not update_expression:
-            return {'statusCode': 400, 'body': json.dumps({'message': 'No hay campos para actualizar'})}
-
-        # Realizar la actualización en DynamoDB
-        response = table.update_item(
-            Key={'empresa': empresa, 'id_categoria': id_categoria},  # Usamos empresa como Partition Key y id_categoria como Sort Key
-            UpdateExpression="SET " + ", ".join(update_expression),
-            ExpressionAttributeValues=expression_values,
-            ReturnValues="ALL_NEW"
-        )
-
-        updated_category = response.get('Attributes', {})
-
-        return {'statusCode': 200, 'body': json.dumps({'message': 'Categoría actualizada', 'category': updated_category})}
+        return {"statusCode": 200,
+                "body": json.dumps(
+                    {"message": "Categoría actualizada",
+                     "category": resp.get("Attributes", {})}
+                )}
 
     except Exception as e:
-        return {'statusCode': 400, 'body': json.dumps({'error': str(e)})}
+        return {"statusCode": 400,
+                "body": json.dumps({"error": str(e)})}

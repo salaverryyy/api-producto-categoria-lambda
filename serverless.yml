@@ -1,4 +1,4 @@
-org: jhonchilo
+org: gfc0r
 service: api-productos-categorias
 
 provider:
@@ -9,10 +9,10 @@ provider:
   iam:
     role: arn:aws:iam::570699102669:role/LabRole 
   environment:
-    PRODUCTS_TABLE: ${sls:stage}-t_productos
-    CATEGORIES_TABLE: ${sls:stage}-t_categorias
-    PRODUCT_CATEGORY_TABLE: ${sls:stage}-product_category
-    JWT_SECRET: "tu_clave_secreta_super_segura"
+  PRODUCTS_TABLE   : ${sls:stage}-t_productos
+  CATEGORIES_TABLE : ${sls:stage}-t_categorias
+  JWT_SECRET: "tu_clave_secreta_super_segura"
+
 
 functions:
   createProduct:
@@ -144,33 +144,18 @@ resources:
         BillingMode: PAY_PER_REQUEST
 
     CategoriasTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.CATEGORIES_TABLE}
-        AttributeDefinitions:
-          - AttributeName: empresa
-            AttributeType: S
-          - AttributeName: id_categoria
-            AttributeType: S
-        KeySchema:
-          - AttributeName: empresa
-            KeyType: HASH  
-          - AttributeName: id_categoria
-            KeyType: RANGE  
-        BillingMode: PAY_PER_REQUEST
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: ${self:provider.environment.CATEGORIES_TABLE}
+    AttributeDefinitions:
+      - AttributeName: empresa
+        AttributeType: S
+      - AttributeName: id_categoria_producto
+        AttributeType: S
+    KeySchema:
+      - AttributeName: empresa
+        KeyType: HASH
+      - AttributeName: id_categoria_producto
+        KeyType: RANGE
+    BillingMode: PAY_PER_REQUEST
 
-    ProductCategoryTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.PRODUCT_CATEGORY_TABLE}
-        AttributeDefinitions:
-          - AttributeName: id_producto
-            AttributeType: S
-          - AttributeName: id_categoria
-            AttributeType: S
-        KeySchema:
-          - AttributeName: id_producto
-            KeyType: HASH  
-          - AttributeName: id_categoria
-            KeyType: RANGE  
-        BillingMode: PAY_PER_REQUEST
