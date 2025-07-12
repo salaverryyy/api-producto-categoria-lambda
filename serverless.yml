@@ -13,6 +13,7 @@ provider:
     PRODUCTS_TABLE:   ${sls:stage}-t_productos     
     CATEGORIES_TABLE: ${sls:stage}-t_categorias    
     JWT_SECRET: "tu_clave_secreta_super_segura"
+    VERIFY_TOKEN_URL: https://7q0ekap8l8.execute-api.us-east-1.amazonaws.com/dev/usuarios/verify
 
 functions:
   crearProducto:
