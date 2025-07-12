@@ -1,44 +1,38 @@
-import json, boto3, os
+import json, os, boto3
 
+# ─── DynamoDB ───────────────────────────────────────────────────────
 dynamodb = boto3.resource("dynamodb")
-table    = dynamodb.Table(os.getenv("PRODUCTS_TABLE"))
-VERIFY_TOKEN_LAMBDA = os.getenv("VERIFY_TOKEN_LAMBDA")
+table    = dynamodb.Table(os.environ["PRODUCTS_TABLE"])   # obliga a que exista
 
 def lambda_handler(event, context):
     try:
-        # --- Autenticación -----------------
-        auth = event["headers"].get("Authorization")
-        if not auth:
-            return {"statusCode": 401,
-                    "body": json.dumps({"message": "Token no proporcionado"})}
+        # ── 1) Leer parámetros de la query - GET ─────────────────────
+        qs          = event.get("queryStringParameters") or {}
+        tenant_id   = qs.get("tenant_id")
+        id_producto = qs.get("id_producto")
 
-        token = auth.split()[1]
-        resp  = boto3.client("lambda").invoke(
-            FunctionName   = VERIFY_TOKEN_LAMBDA,
-            InvocationType = "RequestResponse",
-            Payload        = json.dumps({"token": token})
+        if not tenant_id or not id_producto:
+            return {"statusCode": 400,
+                    "body": json.dumps({
+                        "message": "Debes enviar tenant_id e id_producto en la query string"
+                    })}
+
+        # ── 2) Buscar en DynamoDB ───────────────────────────────────
+        resp = table.get_item(
+            Key={
+                "tenant_id": tenant_id,
+                "id_producto": id_producto
+            }
         )
-        if json.loads(resp["Payload"].read().decode("utf-8"))["statusCode"] != 200:
-            return {"statusCode": 403,
-                "body": json.dumps({"message": "Acceso no autorizado"})}
-
-        # --- Datos de entrada --------------
-        body        = json.loads(event["body"])
-        tenant_id   = body["empresa"]          # ahora la PK
-        id_producto = body["id_producto"]
-
-        # --- Búsqueda ----------------------
-        response = table.get_item(
-            Key={"tenant_id": tenant_id, "id_producto": id_producto}
-        )
-        product = response.get("Item")
-        if not product:
+        item = resp.get("Item")
+        if not item:
             return {"statusCode": 404,
                     "body": json.dumps({"message": "Producto no encontrado"})}
 
+        # ── 3) Respuesta OK ─────────────────────────────────────────
         return {"statusCode": 200,
-                "body": json.dumps({"product": product})}
+                "body": json.dumps({"product": item})}
 
     except Exception as e:
-        return {"statusCode": 400,
+        return {"statusCode": 500,
                 "body": json.dumps({"error": str(e)})}

@@ -132,12 +132,12 @@ resources:
       Properties:
         TableName: ${self:provider.environment.PRODUCTS_TABLE}
         AttributeDefinitions:
-          - AttributeName: empresa
+          - AttributeName: tenant_id
             AttributeType: S
           - AttributeName: id_producto
             AttributeType: S
         KeySchema:
-          - AttributeName: empresa
+          - AttributeName: tenant_id
             KeyType: HASH
           - AttributeName: id_producto
             KeyType: RANGE
@@ -148,12 +148,12 @@ resources:
       Properties:
         TableName: ${self:provider.environment.CATEGORIES_TABLE}
         AttributeDefinitions:
-          - AttributeName: empresa
+          - AttributeName: tenant_id
             AttributeType: S
           - AttributeName: id_categoria_producto
             AttributeType: S
         KeySchema:
-          - AttributeName: empresa
+          - AttributeName: tenant_id
             KeyType: HASH
           - AttributeName: id_categoria_producto
             KeyType: RANGE
