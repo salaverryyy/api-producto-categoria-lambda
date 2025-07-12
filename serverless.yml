@@ -64,7 +64,7 @@ functions:
     package:
       include:
         - list_products.py
-    events:
+      events:
       - http:
           path: /productos/listar
           method: get
