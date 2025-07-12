@@ -70,6 +70,17 @@ functions:
           method: get
           cors: true
 
+  listarProductosCategoria:
+    handler: list_products_by_category.lambda_handler
+    package:
+      include:
+        - list_products_by_category.py
+      events:
+       - http:
+          path: /productos/categorias/listar
+          method: get
+          cors:true  
+
   crearCategoria:
     handler: create_category.lambda_handler
     package:
