@@ -14,6 +14,11 @@ def lambda_handler(event, context):
         if not tenant_id:
             return {
                 "statusCode": 400,
+                "headers": { # <--- Añade los encabezados CORS aquí
+                    "Access-Control-Allow-Origin": "*", # Permite cualquier origen (para desarrollo)
+                    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                    "Access-Control-Allow-Methods": "GET,OPTIONS" # Ajusta los métodos según lo que uses
+                },
                 "body": json.dumps({
                     "message": "Debes enviar tenant_id en la query string"
                 })
@@ -39,9 +44,23 @@ def lambda_handler(event, context):
         categorias_unicas_list = list(categorias_unicas.values())
 
         # 3) Respuesta ---------------------------------------------
-        return {"statusCode": 200,
-                "body": json.dumps({"categorias": categorias_unicas_list})}
+        return {
+            "statusCode": 200,
+            "headers": { # <--- Añade los encabezados CORS aquí
+                "Access-Control-Allow-Origin": "*", # Permite cualquier origen (para desarrollo)
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "GET,OPTIONS" # Ajusta los métodos según lo que uses
+            },
+            "body": json.dumps({"categorias": categorias_unicas_list})
+        }
 
     except Exception as e:
-        return {"statusCode": 500,
-                "body": json.dumps({"error": str(e)})}
+        return {
+            "statusCode": 500,
+            "headers": { # <--- Y también en caso de error
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "GET,OPTIONS"
+            },
+            "body": json.dumps({"error": str(e)})
+        }
