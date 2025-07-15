@@ -25,13 +25,17 @@ def lambda_handler(event, context):
         )
         categorias = response.get("Items", [])
 
-        # 2.1) Filtrar categorías únicas por nombre
+        # 2.1) Filtrar categorías únicas por nombre y contar entradas
         categorias_unicas = {}
         for cat in categorias:
             nombre = cat["nombre"]
-            # Solo guardar la primera ocurrencia de cada nombre
             if nombre not in categorias_unicas:
-                categorias_unicas[nombre] = cat
+                categorias_unicas[nombre] = {
+                    **cat,
+                    "cantidad_entradas": 1
+                }
+            else:
+                categorias_unicas[nombre]["cantidad_entradas"] += 1
         categorias_unicas_list = list(categorias_unicas.values())
 
         # 3) Respuesta ---------------------------------------------
