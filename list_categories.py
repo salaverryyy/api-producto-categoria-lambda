@@ -25,9 +25,18 @@ def lambda_handler(event, context):
         )
         categorias = response.get("Items", [])
 
+        # 2.1) Filtrar categorías únicas por nombre
+        categorias_unicas = {}
+        for cat in categorias:
+            nombre = cat["nombre"]
+            # Solo guardar la primera ocurrencia de cada nombre
+            if nombre not in categorias_unicas:
+                categorias_unicas[nombre] = cat
+        categorias_unicas_list = list(categorias_unicas.values())
+
         # 3) Respuesta ---------------------------------------------
         return {"statusCode": 200,
-                "body": json.dumps({"categorias": categorias})}
+                "body": json.dumps({"categorias": categorias_unicas_list})}
 
     except Exception as e:
         return {"statusCode": 500,
